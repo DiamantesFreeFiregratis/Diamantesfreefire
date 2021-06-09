@@ -1,0 +1,112 @@
+function showCaptcha() {
+	var sso_captcha = $('.sso_captcha');
+	if (!sso_captcha.is(":visible")) {
+		sso_captcha.show();
+	}
+	refreshCaptcha();
+}
+
+function uuid() {
+	return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+		var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+		return v.toString(16);
+	});
+}
+
+function refreshCaptcha() {
+	var captcha_service_url = CAPTCHA_SERVICE
+	if (SETTINGS.test) {
+		captcha_service_url = CAPTCHA_SERVICE_TEST
+	}
+	captcha_key = uuid().replace(/-/g, '');
+	var sso_captcha = $('#sso_captcha_image');
+	if (sso_captcha.is(":visible")) {
+		$(sso_captcha).find('img').attr('src', captcha_service_url + '?key=' + captcha_key);
+	}
+}
+
+function hideCaptcha() {
+	var sso_captcha = $('.sso_captcha');
+	if (sso_captcha.is(":visible")) {
+		sso_captcha.hide();
+		sso_captcha.find('input').val("");
+	}
+}
+
+var mtcaptchaConfig = {
+	"sitekey": "MTPublic-tukBAQJML",
+	"autoFormValidate": true,
+	"render": "explicit",
+	"loadAnimation": "false",
+	"renderQueue": []
+};
+
+function loadMTCaptcha(formObj, action, mode) {
+	
+	$('<div/>', {'id': 'mtcaptcha_wrapper'}).appendTo(formObj);
+	
+	mtcaptchaConfig["action"] = action;
+	if (mode == "mobile") {
+		mtcaptchaConfig["widgetSize"] = "mini";
+	}
+	
+	if (SETTINGS.iframe) {
+		mtcaptchaConfig["widgetSize"] = "mini";
+	}
+
+	(function () {
+		var mt_service = document.createElement('script');
+		mt_service.async = true;
+		mt_service.src = 'https://service.mtcaptcha.com/mtcv1/client/mtcaptcha.min.js';
+		(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(mt_service);
+		var mt_service2 = document.createElement('script');
+		mt_service2.async = true;
+		mt_service2.src = 'https://service2.mtcaptcha.com/mtcv1/client/mtcaptcha2.min.js';
+		(document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(mt_service2);
+	})();
+}
+
+function showMTCaptcha() {
+	mtcaptchaConfig.renderQueue.push("mtcaptcha_wrapper");
+	try {
+		mtcaptcha_state = mtcaptcha.getStatus();
+		if(!mtcaptcha_state.isVisible) {
+			mtcaptcha.resetUI();
+		}
+	} catch(err) {
+		console.log('showMTCaptcha', err)
+	}
+}
+
+function resetMTCaptcha() {
+	mtcaptcha.resetUI();
+}
+
+function removeMTCaptcha() {
+	try {
+		mtcaptcha.remove();
+	} catch (err) {
+	}
+}
+
+var VERIFIED_TOKEN = [];
+
+function setMTCaptchaToken(request) {
+	try {
+		mtcaptchaToken = mtcaptcha.getVerifiedToken();
+		var i;
+		for (i = 0; i < VERIFIED_TOKEN.length; i++) {
+			if(mtcaptchaToken == VERIFIED_TOKEN[i]) {
+				console.log('mtcaptcha token used');
+				return;
+			}
+		}
+		if (mtcaptchaToken != null) {
+			request['mtcaptcha_token'] = mtcaptchaToken;
+		}
+		VERIFIED_TOKEN.push(mtcaptchaToken);
+	}
+	catch (err) {
+		console.log('setMTCaptchaToken', err)
+	}
+}
